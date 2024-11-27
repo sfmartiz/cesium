@@ -103,6 +103,8 @@ PntsParser.parse = function (arrayBuffer, byteOffset) {
       byteOffset += batchTableBinaryByteLength;
     }
   }
+  console.log('json',batchTableJson);
+  console.log('binary',batchTableBinary);
 
   const featureTable = new Cesium3DTileFeatureTable(
     featureTableJson,
@@ -130,6 +132,7 @@ PntsParser.parse = function (arrayBuffer, byteOffset) {
   // Start with the draco compressed properties and add in uncompressed
   // properties.
   const parsedContent = parseDracoProperties(featureTable, batchTableJson);
+  if (parsedContent.draco) {console.log('Found draco!')};
   parsedContent.rtcCenter = rtcCenter;
   parsedContent.pointsLength = pointsLength;
 
@@ -160,22 +163,22 @@ PntsParser.parse = function (arrayBuffer, byteOffset) {
     parsedContent.isTranslucent = defined(colors) && colors.isTranslucent;
   }
 
-  if (!parsedContent.hasBatchIds) {
-    const batchIds = parseBatchIds(featureTable);
-    parsedContent.batchIds = batchIds;
-    parsedContent.hasBatchIds = parsedContent.hasBatchIds || defined(batchIds);
-  }
+  const batchIds = parseBatchIds(featureTable);
+  console.log('batchIds', batchIds);
+  parsedContent.batchIds = batchIds;
+  parsedContent.hasBatchIds = parsedContent.hasBatchIds || defined(batchIds);
 
   if (parsedContent.hasBatchIds) {
-    const batchLength = featureTable.getGlobalProperty("BATCH_LENGTH");
-    if (!defined(batchLength)) {
-      throw new RuntimeError(
-        "Global property: BATCH_LENGTH must be defined when BATCH_ID is defined."
-      );
-    }
-    parsedContent.batchLength = batchLength;
+    // const batchLength = featureTable.getGlobalProperty("BATCH_LENGTH");
+    // if (!defined(batchLength)) {
+    //   throw new RuntimeError(
+    //     "Global property: BATCH_LENGTH must be defined when BATCH_ID is defined."
+    //   );
+    // }
+    parsedContent.batchLength = pointsLength;
   }
 
+  console.log('defined', defined(batchTableBinary))
   if (defined(batchTableBinary)) {
     // Copy the batchTableBinary section and let the underlying ArrayBuffer be freed
     batchTableBinary = new Uint8Array(batchTableBinary);
@@ -457,24 +460,63 @@ function parseNormals(featureTable) {
 }
 
 function parseBatchIds(featureTable) {
-  const featureTableJson = featureTable.json;
-  if (defined(featureTableJson.BATCH_ID)) {
-    const batchIds = featureTable.getPropertyArray(
-      "BATCH_ID",
-      ComponentDatatype.UNSIGNED_SHORT,
-      1
-    );
-    return {
-      name: VertexAttributeSemantic.FEATURE_ID,
-      semantic: VertexAttributeSemantic.FEATURE_ID,
-      setIndex: 0,
-      typedArray: batchIds,
-      componentDatatype: ComponentDatatype.fromTypedArray(batchIds),
-      type: AttributeType.SCALAR,
-    };
-  }
+  // const featureTableJson = featureTable.json;
 
-  return undefined;
+  const batchIds = new Uint32Array(featureTable.featuresLength);
+
+  const result = {
+    name: VertexAttributeSemantic.FEATURE_ID,
+    semantic: VertexAttributeSemantic.FEATURE_ID,
+    setIndex: 0,
+    typedArray: batchIds,
+    componentDatatype: ComponentDatatype.fromTypedArray(batchIds),
+    type: AttributeType.SCALAR,
+  };
+  return result;
+
+  // if (defined(featureTableJson.BATCH_ID)) {
+  //   const batchIds = featureTable.getPropertyArray(
+  //     "BATCH_ID",
+  //     ComponentDatatype.UNSIGNED_SHORT,
+  //     1
+  //   );
+  //   const result = {
+  //     name: VertexAttributeSemantic.FEATURE_ID,
+  //     semantic: VertexAttributeSemantic.FEATURE_ID,
+  //     setIndex: 0,
+  //     typedArray: batchIds,
+  //     componentDatatype: ComponentDatatype.fromTypedArray(batchIds),
+  //     type: AttributeType.SCALAR,
+  //   };
+  //   console.log('parseBatchIds', result);
+  //   return result;
+  // }
+
+  // return undefined;
 }
+
+
+// function parseBatchIds(featureTable) {
+//   const featureTableJson = featureTable.json;
+//   if (defined(featureTableJson.BATCH_ID)) {
+//     const batchIds = featureTable.getPropertyArray(
+//       "BATCH_ID",
+//       ComponentDatatype.UNSIGNED_SHORT,
+//       1
+//     );
+//     const result = {
+//       name: VertexAttributeSemantic.FEATURE_ID,
+//       semantic: VertexAttributeSemantic.FEATURE_ID,
+//       setIndex: 0,
+//       typedArray: batchIds,
+//       componentDatatype: ComponentDatatype.fromTypedArray(batchIds),
+//       type: AttributeType.SCALAR,
+//     };
+//     console.log('parseBatchIds', result);
+//     return result;
+//   }
+
+//   return undefined;
+// }
 
 export default PntsParser;

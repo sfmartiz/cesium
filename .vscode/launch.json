@@ -8,7 +8,6 @@
             "cwd": "${workspaceFolder}",
             "runtimeExecutable": "npm",
             "runtimeArgs": ["run-script", "start"],
-            "noDebug": true,
             "serverReadyAction":{
                 "action": "startDebugging",
                 "name": "Launch in Chrome",

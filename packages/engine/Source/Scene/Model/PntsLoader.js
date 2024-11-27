@@ -547,30 +547,69 @@ function makeAttributes(loader, parsedContent, context) {
 }
 
 function makeStructuralMetadata(parsedContent, customAttributeOutput) {
-  const batchLength = parsedContent.batchLength;
   const pointsLength = parsedContent.pointsLength;
   const batchTableBinary = parsedContent.batchTableBinary;
 
-  // If there are batch IDs, parse as a property table. Otherwise, parse
-  // as property attributes.
-  const parseAsPropertyAttributes = !defined(parsedContent.batchIds);
-
-  if (defined(batchTableBinary) || parsedContent.hasDracoBatchTable) {
-    const count = defaultValue(batchLength, pointsLength);
+  if ((defined(batchTableBinary) || parsedContent.hasDracoBatchTable) && defined(parsedContent.batchIds)) {
+    parsedContent.batchTableBinary = new Uint8Array(pointsLength*2);
+    parsedContent.batchTableJson = {
+      Classification: {
+        byteOffset: 0,
+        componentType: 'UNSIGNED_BYTE',
+        type: 'SCALAR'
+      },
+      FakeItem: {
+        byteOffset: pointsLength,
+        componentType: 'UNSIGNED_BYTE',
+        type: 'SCALAR'
+      }
+    };
+    for (let i = 0; i < pointsLength; i++) {
+      parsedContent.batchIds.typedArray[i] = i;
+      parsedContent.batchTableBinary[i] = i%256;
+      parsedContent.batchTableBinary[pointsLength+i] = i%256;
+    }
     return parseBatchTable({
-      count: count,
+      count: pointsLength,
       batchTable: parsedContent.batchTableJson,
-      binaryBody: batchTableBinary,
-      parseAsPropertyAttributes: parseAsPropertyAttributes,
+      binaryBody: parsedContent.batchTableBinary,
+      parseAsPropertyAttributes: false,
       customAttributeOutput: customAttributeOutput,
     });
   }
 
+  console.log('no batch table found :(');
   return new StructuralMetadata({
     schema: {},
     propertyTables: [],
   });
 }
+
+// function makeStructuralMetadata(parsedContent, customAttributeOutput) {
+//   const batchLength = parsedContent.batchLength;
+//   const pointsLength = parsedContent.pointsLength;
+//   const batchTableBinary = parsedContent.batchTableBinary;
+
+//   // If there are batch IDs, parse as a property table. Otherwise, parse
+//   // as property attributes.
+//   const parseAsPropertyAttributes = !defined(parsedContent.batchIds);
+
+//   if (defined(batchTableBinary) || parsedContent.hasDracoBatchTable) {
+//     const count = defaultValue(batchLength, pointsLength);
+//     return parseBatchTable({
+//       count: count,
+//       batchTable: parsedContent.batchTableJson,
+//       binaryBody: batchTableBinary,
+//       parseAsPropertyAttributes: parseAsPropertyAttributes,
+//       customAttributeOutput: customAttributeOutput,
+//     });
+//   }
+
+//   return new StructuralMetadata({
+//     schema: {},
+//     propertyTables: [],
+//   });
+// }
 
 function makeComponents(loader, context) {
   const parsedContent = loader._parsedContent;
